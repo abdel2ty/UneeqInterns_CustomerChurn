@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import os
+import os 
 
 # Use relative path to load the model (same folder as this app)
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "knn_churn_model.pkl")
