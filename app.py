@@ -1,45 +1,32 @@
 import streamlit as st
 import pandas as pd
+import os
+from sklearn.neighbors import KNeighborsClassifier
 import joblib
-import os 
 
-# Use relative path to load the model (same folder as this app)
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "knn_churn_model.pkl")
-model = joblib.load(MODEL_PATH)
+MODEL_PATH = "knn_churn_model.pkl"
 
-st.title("Customer Churn Prediction - Upload Test File")
-
-st.write("Upload a CSV file with customer data to predict churn.")
-
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-
-if uploaded_file is not None:
-    test_data = pd.read_csv(uploaded_file)
-    st.write("Preview of uploaded data:")
-    st.dataframe(test_data.head())
-
+# Check if model exists, if not, train it
+if os.path.exists(MODEL_PATH):
+    model = joblib.load(MODEL_PATH)
+else:
+    st.write("Training KNN model...")
+    # هنا حط X_train و y_train جاهزين أو حملهم من ملف CSV
+    train_data = pd.read_csv("train_data.csv")
+    X_train = train_data.drop(columns=['Churn','CustomerID'])
     # Encode categorical columns
-    test_data['Gender_Female'] = test_data['Gender'].apply(lambda x: 1 if x=="Female" else 0)
-    test_data['Subscription Type_Standard'] = test_data['Subscription Type'].apply(lambda x: 1 if x=="Standard" else 0)
-    test_data['Contract Length_Quarterly'] = test_data['Contract Length'].apply(lambda x: 1 if x=="Quarterly" else 0)
-    test_data['Contract Length_Annual'] = test_data['Contract Length'].apply(lambda x: 1 if x=="Annual" else 0)
-
-    features = ['Age', 'Tenure', 'Usage Frequency', 'Support Calls', 'Payment Delay', 
-                'Total Spend', 'Last Interaction', 
-                'Gender_Female', 'Subscription Type_Standard', 
-                'Contract Length_Quarterly', 'Contract Length_Annual']
+    X_train['Gender_Female'] = train_data['Gender'].apply(lambda x: 1 if x=="Female" else 0)
+    X_train['Subscription Type_Standard'] = train_data['Subscription Type'].apply(lambda x: 1 if x=="Standard" else 0)
+    X_train['Contract Length_Quarterly'] = train_data['Contract Length'].apply(lambda x: 1 if x=="Quarterly" else 0)
+    X_train['Contract Length_Annual'] = train_data['Contract Length'].apply(lambda x: 1 if x=="Annual" else 0)
+    X_train = X_train[['Age','Tenure','Usage Frequency','Support Calls','Payment Delay','Total Spend','Last Interaction',
+                       'Gender_Female','Subscription Type_Standard','Contract Length_Quarterly','Contract Length_Annual']]
     
-    X_test = test_data[features]
-
-    predictions = model.predict(X_test)
-    test_data['Churn_Prediction'] = predictions
-
-    st.write("Predictions:")
-    st.dataframe(test_data[['CustomerID', 'Churn_Prediction']])
+    y_train = train_data['Churn']
     
-    st.download_button(
-        label="Download Predictions as CSV",
-        data=test_data.to_csv(index=False),
-        file_name="churn_predictions.csv",
-        mime="text/csv"
-    )
+    model = KNeighborsClassifier(n_neighbors=5)
+    model.fit(X_train, y_train)
+    joblib.dump(model, MODEL_PATH)
+    st.write("Model trained and saved!")
+
+st.write("Model is ready to use!")
